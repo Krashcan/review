@@ -1,0 +1,13 @@
+.movie{
+	font-family: monospace;
+}
+.image{
+	float:left;
+}
+.text{
+	float:right;
+	max-width: auto;
+}
+.clearfix{
+	clear: both;
+}
