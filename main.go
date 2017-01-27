@@ -12,6 +12,8 @@ import(
 	"encoding/json"
 	"os"
 	"html/template"
+	"strconv"
+//	"sync"
 )
 
 type fileInfo struct{
@@ -25,26 +27,33 @@ type fileInfo struct{
 	Awards string `json:"Awards"`;
 }
 
+type node struct{
+	Movie fileInfo 
+	Left *(node) 
+	Right *(node) 
+}
+
 var movie struct{
 	Name string;
 	Year string;
 }
+var root *node
 var Movies []fileInfo
 func main() {
+//	goGroup := new(sync.WaitGroup)
+	
 	flag.Parse()
 	files, _ := ioutil.ReadDir(flag.Args()[0])
 	var queryNames []string
 	for _, f := range files {
        	queryNames= append(queryNames,url.QueryEscape(f.Name()))
     }
-	//fmt.Println(os.Getenv("GOPATH") + "/src/github.com/krashcan/review/template/index.tpl")
 	fmt.Println("Preparing data")
 	
-    for i,f:=range queryNames{
-		go GetTitleAndYear("https://opensubtitles.co/search?q=" + f,&i)
+    for i:=0;i<len(queryNames);i++{
+		go GetTitleAndYear("https://opensubtitles.co/search?q=" + queryNames[i])
     }
-
-    fmt.Println("Preparation DONE")
+    
 	http.HandleFunc("/",ShowRatings)
     http.Handle("/static/",http.StripPrefix("/static/",http.FileServer(http.Dir(os.Getenv("GOPATH") + "/src/github.com/krashcan/review/static"))))
     
@@ -59,13 +68,14 @@ func ShowRatings(w http.ResponseWriter,r *http.Request){
 	t.Execute(w,Movies)
 }
 
-func GetTitleAndYear(url string,i *int){
+func GetTitleAndYear(url string){
 	resp,err := http.Get(url)
 	if err!=nil{
 		fmt.Println(err)
-		(*i)--
+		GetTitleAndYear(url)
 		return
 	}
+	defer resp.Body.Close()
 	var movieData string
 	if resp.StatusCode != 200 {
 		fmt.Println("statuscode",err)
@@ -98,11 +108,41 @@ func GetTitleAndYear(url string,i *int){
 	if err!=nil{
 		log.Fatal(err)
 	}
-	var x fileInfo
+	x := fileInfo{}
 	jsonParser := json.NewDecoder(req.Body)
     if err := jsonParser.Decode(&x); err != nil {
         log.Fatal("parsing config file", err)
     }
-    Movies = append(Movies,x)
+    if x == (fileInfo{}){
+     	return
+    }
+    root = InsertTree(root,x)
+    Movies = nil
+    
+    InorderTraversal(root)
     fmt.Println(x.Title,x.Year)
+ }
+
+func InsertTree(leaf *node,x fileInfo) *node{
+	a,_ := strconv.ParseFloat(x.Rating,32)
+	
+	if leaf == nil{
+		return &node{x,nil,nil}
+	}else if b,_ := strconv.ParseFloat(leaf.Movie.Rating,32); a>b{
+		leaf.Left = InsertTree(leaf.Left,x)
+		return leaf
+	}
+	leaf.Right = InsertTree(leaf.Right,x)
+	return leaf
+	
 }
+
+func InorderTraversal(leaf *node){
+	if leaf == nil{
+		return
+	}
+	InorderTraversal(leaf.Left)
+	Movies = append(Movies,leaf.Movie)
+	InorderTraversal(leaf.Right)
+}
+

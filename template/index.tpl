@@ -16,7 +16,7 @@
                 <img src="{{$f.Image}}" class="img-thumbnail">
             </div>
             <div class="col-md-8">
-                <h3>{{$f.Title}}</h3><h3>{{$f.Year}}</h3>
+                <h3>{{$f.Title}}</h3><h3>{{$f.Year}}</h3><h2>{{$f.Rating}}</h2>
                 <h6>{{$f.Runtime}}</h6><h6> {{$f.Genre}}</h6>
                 <br>
                 <p>{{$f.Description}}</p>
